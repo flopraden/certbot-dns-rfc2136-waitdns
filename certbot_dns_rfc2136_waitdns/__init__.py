@@ -1,6 +1,4 @@
-# certbot-dns-rfc2136-waitdns
-Using DNS RFC2136 Authentificator with WaitDNS
-
+"""
 The `~certbot_dns_rfc2136_waitdns.dns_rfc2136_waitdns` plugin automates the process of
 completing a ``dns-01`` challenge (`~acme.challenges.DNS01`) by creating, and
 subsequently removing, TXT records using RFC 2136 Dynamic Updates.
@@ -30,5 +28,4 @@ More Documentation
 ------------------
 
 Since we use the certbot_dns_rfc2136 authentificator plugin, see also their doc
-
-
+"""
