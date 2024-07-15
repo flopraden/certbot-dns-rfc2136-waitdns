@@ -42,7 +42,7 @@ setup(
 
     entry_points={
         'certbot.plugins': [
-            'certbot_dns_rfc2136_waitdns = certbot_dns_rfc2136_waitdns._internal.dns_rfc2136_waitdns:Authenticator',
+            'dns-rfc2136-waitdns = certbot_dns_rfc2136_waitdns._internal.dns_rfc2136_waitdns:Authenticator',
         ],
     }
 )
