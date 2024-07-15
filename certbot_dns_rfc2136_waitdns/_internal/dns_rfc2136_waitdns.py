@@ -68,7 +68,7 @@ class Authenticator(dns_rfc2136.Authenticator):
     It also wait for DNS propagation before returning hand.
     """
 
-    description = 'Obtain certificates using a DNS TXT record (if you are using BIND for DNS).'
+    description = 'Obtain certificates using a DNS TXT record with RFC2136 Dynamic update and wait for propagation.'
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -88,7 +88,7 @@ class Authenticator(dns_rfc2136.Authenticator):
 
     def perform(self, achalls: List[achallenges.AnnotatedChallenge]
                 ) -> List[challenges.ChallengeResponse]: # pylint: disable=missing-function-docstring
-        responses = self.perform(achalls)
+        responses = super().perform(achalls)
         retry = self.conf('propagation-retry')
         wait = self.conf('propagation-seconds')
         for achall in achalls:
