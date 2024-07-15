@@ -18,7 +18,7 @@ from certbot_dns_rfc2136._internal import dns_rfc2136
 logger = logging.getLogger(__name__)
 
 
-def find_authority(qname):
+def find_authority(qname:str):
     """Locate the autoritative name server for the given name using a stub
     resolver.
     """
@@ -30,7 +30,7 @@ def find_authority(qname):
     ]
 
 
-def wait_dns(qname, rdtype, value, retry, sleep_delay):
+def wait_dns(qname:str, rdtype:str, value:str, retry:int, sleep_delay:int):
     """Wait for the authoritative name server for the given domain to have
     the given value.
     """
@@ -47,7 +47,7 @@ def wait_dns(qname, rdtype, value, retry, sleep_delay):
         if value in str(response):
             logger.debug("%s have the expected value!", authority_name)
         else:
-            if retrys[authority_address] < retry:
+            if (retry < 0) or (retrys[authority_address] < retry):
                 logger.info(
                   "%s don't have the expected value, will have to retry (%d / %d)", 
                   authority_name, retrys[authority_address], retry
@@ -74,9 +74,13 @@ class Authenticator(dns_rfc2136.Authenticator):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def add_parser_arguments(cls, add: Callable[..., None],
-                             default_propagation_retry: int = 6) -> None:
-        super().add_parser_arguments(add, default_propagation_retry=6)
+    def add_parser_arguments(cls, add: Callable[..., None]) -> None:
+        super().add_parser_arguments(add)
+        add('propagation-retry',
+             help='The number of retry for the propagation waiting.',
+             default=6,
+             type=int
+        )
 
     def more_info(self) -> str:
         return 'This plugin configures a DNS TXT record to respond to a dns-01 challenge using ' + \
@@ -85,14 +89,15 @@ class Authenticator(dns_rfc2136.Authenticator):
     def perform(self, achalls: List[achallenges.AnnotatedChallenge]
                 ) -> List[challenges.ChallengeResponse]: # pylint: disable=missing-function-docstring
         responses = self.perform(achalls)
-
+        retry = self.conf('propagation-retry')
+        wait = self.conf('propagation-seconds')
         for achall in achalls:
             domain = achall.domain
             validation_domain_name = achall.validation_domain_name(domain)
             validation = achall.validation(achall.account_key)
             wait_dns(validation_domain_name, "TXT", validation, 
-                     self.conf('propagation-retry'), 
-                     self.conf('propagation-seconds')
+                     retry, 
+                     wait
                     )
         # We have waiting and retrying for all domains.
         return responses
