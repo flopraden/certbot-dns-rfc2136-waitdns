@@ -34,6 +34,8 @@ setup(
     include_package_data=True,
 
     install_requires=[
+        'acme'
+        'certbot'
         'dns'
         'certbot_dns_rfc2136'
     ],

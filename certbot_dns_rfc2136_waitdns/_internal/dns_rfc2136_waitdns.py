@@ -2,6 +2,14 @@
 
 import logging
 
+from typing import Any
+from typing import Callable
+from typing import cast
+from typing import Optional
+
+from acme import challenges
+from certbot import achallenges
+
 import dns.message
 import dns.resolver
 import dns.query
