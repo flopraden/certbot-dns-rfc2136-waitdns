@@ -2,10 +2,8 @@
 
 import logging
 
-from typing import Any
-from typing import Callable
-from typing import cast
-from typing import Optional
+from typing import Any, Callable, cast, Optional, List
+from time import sleep
 
 from acme import challenges
 from certbot import achallenges
@@ -86,7 +84,7 @@ class Authenticator(dns_rfc2136.Authenticator):
 
     def perform(self, achalls: List[achallenges.AnnotatedChallenge]
                 ) -> List[challenges.ChallengeResponse]: # pylint: disable=missing-function-docstring
-        ret = self.perform(achalls)
+        responses = self.perform(achalls)
 
         for achall in achalls:
             domain = achall.domain
