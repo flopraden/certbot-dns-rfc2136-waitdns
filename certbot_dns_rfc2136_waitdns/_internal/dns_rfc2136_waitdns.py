@@ -6,7 +6,7 @@ from typing import Any, Callable, cast, Optional, List
 from time import sleep
 
 from acme import challenges
-from certbot import achallenges
+from certbot import achallenges, errors
 
 import dns.message
 import dns.resolver
@@ -30,7 +30,7 @@ def find_authority(qname:str):
     ]
 
 
-def wait_dns(qname:str, rdtype:str, value:str, retry:int, sleep_delay:int):
+def wait_dns(qname:str, rdtype:str, value:str, retry:int, sleep_delay:int) -> bool:
     """Wait for the authoritative name server for the given domain to have
     the given value.
     """
@@ -52,6 +52,7 @@ def wait_dns(qname:str, rdtype:str, value:str, retry:int, sleep_delay:int):
                   "%s don't have the expected value, will have to retry (%d / %d)", 
                   authority_name, retrys[authority_address], retry
                 )
+                retrys[authority_address] += 1
                 authorities.append((authority_name, authority_address))
                 sleep(sleep_delay)
             else:
@@ -59,8 +60,9 @@ def wait_dns(qname:str, rdtype:str, value:str, retry:int, sleep_delay:int):
                   "%s don't have the expected value, Max retry reached", 
                   authority_name
                 )
+                 return False
     logger.info("All authoritative servers have the expected value.")
-
+    return True
 class Authenticator(dns_rfc2136.Authenticator):
     """DNS Authenticator using RFC 2136 Dynamic Updates and wait for DNS propagation.
 
@@ -95,9 +97,10 @@ class Authenticator(dns_rfc2136.Authenticator):
             domain = achall.domain
             validation_domain_name = achall.validation_domain_name(domain)
             validation = achall.validation(achall.account_key)
-            wait_dns(validation_domain_name, "TXT", validation, 
+            if not wait_dns(validation_domain_name, "TXT", validation, 
                      retry, 
                      wait
-                    )
+                    ):
+                raise errors.PluginError('The DNS update could not update all DNS server. See log for more information.')
         # We have waiting and retrying for all domains.
         return responses
