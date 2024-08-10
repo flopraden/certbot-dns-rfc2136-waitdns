@@ -4,6 +4,7 @@ import logging
 
 from typing import Any, Callable, cast, Optional, List
 from time import sleep
+import random
 
 from acme import challenges
 from certbot import achallenges, errors
@@ -30,7 +31,7 @@ def find_authority(qname:str):
     ]
 
 
-def wait_dns(qname:str, rdtype:str, value:str, retry:int, sleep_delay:int) -> bool:
+def wait_dns(qname:str, rdtype:str, value:str, retry:int, sleep_delay:int, max_sleep_delay:int, exponential_backoff:bool, backoff_seconds:int) -> bool:
     """Wait for the authoritative name server for the given domain to have
     the given value.
     """
@@ -52,9 +53,15 @@ def wait_dns(qname:str, rdtype:str, value:str, retry:int, sleep_delay:int) -> bo
                   "%s don't have the expected value, will have to retry (%d / %d)", 
                   authority_name, retrys[authority_address], retry
                 )
-                retrys[authority_address] += 1
                 authorities.append((authority_name, authority_address))
-                sleep(sleep_delay)
+                delay = sleep_delay + random.uniform(0, 1)
+                if exponential_backoff:
+                    delay +=  (backoff_seconds * 2 **  retrys[authority_address])
+                if delay > max_sleep_delay:
+                    delay = max_sleep_delay
+                logger.info("Waiting for %f seconds", delay)
+                sleep(delay)
+                retrys[authority_address] += 1
             else:
                  logger.error(
                   "%s don't have the expected value, Max retry reached", 
@@ -83,6 +90,21 @@ class Authenticator(dns_rfc2136.Authenticator):
              default=6,
              type=int
         )
+        add('exponential-backoff-retry',
+             help='Enable exponential backoff when retrying for a server.',
+             default=False,
+             type=bool
+        )
+        add('exponential-backoff-seconds',
+             help='Parameters in the exponential backoff in seconds : Using <exponential-backoff-seconds> * 2**(number of retries done).',
+             default=600,
+             type=int
+        )
+        add('max-delay-time',
+             help='The number of maximum seconds to wait between each retry.',
+             default=600,
+             type=int
+        )
 
     def more_info(self) -> str:
         return 'This plugin configures a DNS TXT record to respond to a dns-01 challenge using ' + \
@@ -93,13 +115,17 @@ class Authenticator(dns_rfc2136.Authenticator):
         responses = super().perform(achalls)
         retry = self.conf('propagation-retry')
         wait = self.conf('propagation-seconds')
+        exponential_backoff = self.conf('exponential-backoff-retry')
+        exponential_backoff_seconds = self.conf('exponential-backoff-seconds')
+        max_delay_time = self.conf('max-delay-time')
         for achall in achalls:
             domain = achall.domain
             validation_domain_name = achall.validation_domain_name(domain)
             validation = achall.validation(achall.account_key)
             if not wait_dns(validation_domain_name, "TXT", validation, 
                      retry, 
-                     wait
+                     wait, max_delay_time,
+                     exponential_backoff, exponential_backoff_seconds
                     ):
                 raise errors.PluginError('The DNS update could not update all DNS server. See log for more information.')
         # We have waiting and retrying for all domains.
