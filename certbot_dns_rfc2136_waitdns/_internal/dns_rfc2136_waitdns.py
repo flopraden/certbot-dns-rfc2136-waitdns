@@ -97,7 +97,7 @@ class Authenticator(dns_rfc2136.Authenticator):
         )
         add('exponential-backoff-seconds',
              help='Parameters in the exponential backoff in seconds : Using <exponential-backoff-seconds> * 2**(number of retries done).',
-             default=600,
+             default=30,
              type=int
         )
         add('max-delay-time',
